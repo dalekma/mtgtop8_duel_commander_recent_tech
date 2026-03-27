@@ -156,14 +156,25 @@ Use this file-level map when making changes so each layer remains isolated:
 | card_mana_value |
 | card_types |
 | is_land |
-| decks_with_card |
+| total_appearances |
 | total_copies |
+| distinct_decks |
+| distinct_events |
+| distinct_commanders |
+| deck_colors_seen |
+| card_colors_seen |
 | avg_copies_per_deck |
 | top8_share |
 | winrate_proxy |
 | first_seen_date |
 | last_seen_date |
 | days_since_last_seen |
+| multi_deck_presence_signal |
+| cross_event_spread_signal |
+| shell_diversity_signal |
+| recency_factor_signal |
+| signal_score |
+| notes |
 | trend_7d |
 | trend_28d |
 | updated_at_utc |
@@ -181,10 +192,13 @@ Use this file-level map when making changes so each layer remains isolated:
 | emerging_score |
 | confidence |
 | sample_decks |
-| trend_signal |
-| recency_signal |
-| penetration_signal |
-| conversion_signal |
+| sample_events |
+| sample_commanders |
+| multi_deck_presence_signal |
+| cross_event_spread_signal |
+| shell_diversity_signal |
+| recency_factor_signal |
+| why_interesting |
 | notes |
 | updated_at_utc |
 
@@ -301,8 +315,8 @@ Run path:
 2. Determine window (`days_back`) and event cap (`max_events_per_run`).
 3. Parse MTGTop8 recent Duel Commander Top 8 events.
 4. Incrementally append unseen events/decks/cards.
-5. Recompute `card_summary` and `emerging_tech`.
-6. Persist `last_successful_run_utc`.
+5. Recompute `card_summary` and `emerging_tech` **only after append stage succeeds**.
+6. Persist `last_successful_run_utc` after successful append + summary rebuild.
 
 ---
 
@@ -351,38 +365,50 @@ Best practices:
 
 ## 9) Summary + Emerging-Tech Logic (with Tunable Scoring)
 
-`card_summary` is built from `cards_raw` (+ deck/event context):
+`card_summary` is built from `cards_raw` joined with deck/event context (`decks_raw`, `events_raw`):
 
-- `decks_with_card`: count distinct decks containing card.
+- `total_appearances`: total card-line appearances across ingested decks.
 - `total_copies`: sum of `card_qty`.
-- `avg_copies_per_deck`: `total_copies / decks_with_card`.
-- `top8_share`: `decks_with_card / distinct_top8_decks_in_window`.
-- `winrate_proxy`: placement-weighted score proxy (example: 1st>2nd>3rd-4th>5th-8th).
-- `trend_7d` / `trend_28d`: short vs medium window deltas.
+- `distinct_decks`, `distinct_events`, `distinct_commanders`: breadth metrics.
+- `deck_colors_seen`, `card_colors_seen`: deterministic comma-separated observed identities.
+- `first_seen_date` / `last_seen_date` + recency-derived fields.
+- `signal_score`: weighted summary signal used downstream.
+- `notes`: deterministic compact context (`events:X | commanders:Y | deck_colors:Z`).
 
-`emerging_tech` rank should combine normalized signals:
-
-- `recency_signal` (how recently card appeared).
-- `penetration_signal` (share of Top 8 decks).
-- `conversion_signal` (placement quality proxy).
-- `trend_signal` (growth acceleration / momentum).
-
-Example score:
+`emerging_tech` uses an explicit weighted heuristic:
 
 ```text
 emerging_score =
-  weight_recency * recency_signal +
-  weight_penetration * penetration_signal +
-  weight_conversion * conversion_signal
+  weight_multi_deck_presence * multi_deck_presence_signal +
+  weight_cross_event_spread * cross_event_spread_signal +
+  weight_shell_diversity * shell_diversity_signal +
+  weight_recency_factor * recency_factor_signal
 ```
 
-Optional: fold `trend_signal` into recency or as additional weighted term.
+Signal definitions:
+
+- `multi_deck_presence_signal`: normalized distinct-deck presence.
+- `cross_event_spread_signal`: normalized spread across distinct events.
+- `shell_diversity_signal`: blend of commander diversity and deck-color diversity.
+- `recency_factor_signal`: inverse-age signal using `recency_window_days`.
+
+`why_interesting` is deterministic and short: it describes the top 1-2 weighted signal contributors (for example, “high multi-deck presence; moderate cross-event spread”).
+
+### Default scoring config keys
+
+- `emerging_min_decks`: `2`
+- `recency_window_days`: `30`
+- `weight_multi_deck_presence`: `0.35`
+- `weight_cross_event_spread`: `0.25`
+- `weight_shell_diversity`: `0.20`
+- `weight_recency_factor`: `0.20`
 
 Tuning notes:
 
-- Increase `weight_recency` to favor newly spiking cards.
-- Increase `weight_penetration` to favor broad adoption.
-- Increase `weight_conversion` to favor cards tied to higher finishes.
+- Increase `weight_multi_deck_presence` to emphasize broad multi-deck adoption.
+- Increase `weight_cross_event_spread` to emphasize cross-tournament reproducibility.
+- Increase `weight_shell_diversity` to emphasize commander/color-shell flexibility.
+- Increase `weight_recency_factor` or lower `recency_window_days` to prioritize newer spikes.
 - Enforce minimum sample with `emerging_min_decks` to reduce noise.
 
 ---

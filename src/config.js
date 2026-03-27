@@ -29,15 +29,19 @@ const TAB_SCHEMAS = Object.freeze({
   ],
   card_summary: [
     'card_name', 'card_color_identity', 'card_mana_value', 'card_types', 'is_land',
-    'decks_with_card', 'total_copies', 'avg_copies_per_deck',
-    'top8_share', 'winrate_proxy', 'first_seen_date', 'last_seen_date',
-    'days_since_last_seen', 'trend_7d', 'trend_28d', 'updated_at_utc'
+    'total_appearances', 'total_copies', 'distinct_decks', 'distinct_events', 'distinct_commanders',
+    'deck_colors_seen', 'card_colors_seen',
+    'avg_copies_per_deck', 'top8_share', 'winrate_proxy',
+    'first_seen_date', 'last_seen_date', 'days_since_last_seen',
+    'multi_deck_presence_signal', 'cross_event_spread_signal', 'shell_diversity_signal', 'recency_factor_signal',
+    'signal_score', 'notes',
+    'trend_7d', 'trend_28d', 'updated_at_utc'
   ],
   emerging_tech: [
     'rank', 'card_name', 'card_color_identity', 'card_mana_value', 'card_types', 'is_land',
-    'emerging_score', 'confidence', 'sample_decks',
-    'trend_signal', 'recency_signal', 'penetration_signal', 'conversion_signal',
-    'notes', 'updated_at_utc'
+    'emerging_score', 'confidence', 'sample_decks', 'sample_events', 'sample_commanders',
+    'multi_deck_presence_signal', 'cross_event_spread_signal', 'shell_diversity_signal', 'recency_factor_signal',
+    'why_interesting', 'notes', 'updated_at_utc'
   ]
 });
 
@@ -47,9 +51,11 @@ const DEFAULT_CONFIG = Object.freeze({
   max_events_per_run: 3,
   min_card_copies: 1,
   emerging_min_decks: 2,
-  weight_recency: 0.4,
-  weight_penetration: 0.35,
-  weight_conversion: 0.25,
+  recency_window_days: 30,
+  weight_multi_deck_presence: 0.35,
+  weight_cross_event_spread: 0.25,
+  weight_shell_diversity: 0.20,
+  weight_recency_factor: 0.20,
   last_successful_run_utc: ''
 });
 
