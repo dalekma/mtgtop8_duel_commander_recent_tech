@@ -4,6 +4,30 @@
 
 const COLOR_ORDER = ['W', 'U', 'B', 'R', 'G'];
 
+function normalizeIdPart(value) {
+  return normalizeText(value);
+}
+
+function buildEventIdFromUrl(eventUrl, fallbackEventId) {
+  const fromArg = String(eventUrl || '').match(/[?&]e=(\d+)/i);
+  if (fromArg && fromArg[1]) return normalizeIdPart(fromArg[1]);
+  return normalizeIdPart(fallbackEventId || '');
+}
+
+function buildDeckId(eventId, mtgtop8DeckId) {
+  const normalizedEventId = normalizeIdPart(eventId);
+  const normalizedDeckId = normalizeIdPart(mtgtop8DeckId);
+  if (!normalizedEventId || !normalizedDeckId) return '';
+  return normalizedEventId + '|' + normalizedDeckId;
+}
+
+function buildCardRowId(deckId, cardName, section) {
+  const normalizedDeckId = normalizeIdPart(deckId);
+  const normalizedCardName = normalizeText(cardName).toLowerCase();
+  const normalizedSection = normalizeText(section || 'main').toLowerCase();
+  return [normalizedDeckId, normalizedCardName, normalizedSection].join('|');
+}
+
 function normalizeColorIdentity(raw) {
   const upper = String(raw || '').toUpperCase();
   const symbols = {};
