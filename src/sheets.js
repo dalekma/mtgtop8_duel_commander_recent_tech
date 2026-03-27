@@ -1,0 +1,134 @@
+/**
+ * Google Sheets I/O layer only.
+ */
+
+function getSpreadsheet() {
+  return SpreadsheetApp.getActiveSpreadsheet();
+}
+
+function ensureSheet(name, headers) {
+  const ss = getSpreadsheet();
+  let sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+  }
+
+  const lastCol = Math.max(sheet.getLastColumn(), headers.length);
+  const existing = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+
+  if (!existing[0]) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  } else {
+    const missing = headers.slice(existing.length);
+    if (missing.length > 0) {
+      sheet.getRange(1, existing.length + 1, 1, missing.length).setValues([missing]);
+    }
+  }
+
+  sheet.setFrozenRows(1);
+  return sheet;
+}
+
+function initializeSheets() {
+  const map = getTabHeaderMap();
+  Object.keys(map).forEach(function (tabName) {
+    ensureSheet(tabName, map[tabName]);
+  });
+  logInfo('initialize_sheets_complete', { tabs: Object.keys(map).length });
+}
+
+function getHeaderIndex(sheet) {
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const map = {};
+  headers.forEach(function (h, idx) {
+    map[String(h)] = idx;
+  });
+  return map;
+}
+
+function readExistingIdSet(tabName, idColumnName) {
+  const sheet = ensureSheet(tabName, getTabHeaderMap()[tabName]);
+  if (sheet.getLastRow() <= 1) return {};
+
+  const index = getHeaderIndex(sheet);
+  const colIdx = index[idColumnName];
+  if (colIdx === undefined) throw new Error('Missing column ' + idColumnName + ' on ' + tabName);
+
+  const values = sheet.getRange(2, colIdx + 1, sheet.getLastRow() - 1, 1).getValues();
+  const out = {};
+  values.forEach(function (row) {
+    const v = normalizeText(row[0]);
+    if (v) out[v] = true;
+  });
+  return out;
+}
+
+function appendObjects(tabName, rows, headers) {
+  if (!rows || rows.length === 0) return 0;
+
+  const sheet = ensureSheet(tabName, headers);
+  const values = rows.map(function (row) {
+    return headers.map(function (h) {
+      return row[h] !== undefined ? row[h] : '';
+    });
+  });
+
+  const startRow = sheet.getLastRow() + 1;
+  sheet.getRange(startRow, 1, values.length, headers.length).setValues(values);
+  return values.length;
+}
+
+function replaceSheetData(tabName, headers, rows) {
+  const sheet = ensureSheet(tabName, headers);
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
+  }
+
+  if (!rows || rows.length === 0) return;
+
+  const values = rows.map(function (row) {
+    return headers.map(function (h) { return row[h] !== undefined ? row[h] : ''; });
+  });
+  sheet.getRange(2, 1, values.length, headers.length).setValues(values);
+}
+
+function loadRuntimeConfig() {
+  const sheet = ensureSheet(TAB_NAMES.CONFIG, HEADERS.config);
+  const cfg = getDefaultConfig();
+  if (sheet.getLastRow() <= 1) return cfg;
+
+  const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).getValues();
+  values.forEach(function (row) {
+    const key = normalizeText(row[0]);
+    if (!key) return;
+    cfg[key] = castConfigValue(row[1], cfg[key]);
+  });
+  return cfg;
+}
+
+function castConfigValue(rawValue, defaultValue) {
+  if (typeof defaultValue === 'boolean') {
+    return /^(true|1|yes)$/i.test(String(rawValue));
+  }
+  if (typeof defaultValue === 'number') {
+    const n = Number(rawValue);
+    return Number.isFinite(n) ? n : defaultValue;
+  }
+  return rawValue;
+}
+
+function setConfigValue(key, value, note) {
+  const sheet = ensureSheet(TAB_NAMES.CONFIG, HEADERS.config);
+  const rows = Math.max(sheet.getLastRow() - 1, 0);
+  if (rows > 0) {
+    const values = sheet.getRange(2, 1, rows, 1).getValues();
+    for (var i = 0; i < values.length; i += 1) {
+      if (normalizeText(values[i][0]) === key) {
+        sheet.getRange(i + 2, 1, 1, 3).setValues([[key, value, note || '']]);
+        return;
+      }
+    }
+  }
+  sheet.appendRow([key, value, note || '']);
+}
