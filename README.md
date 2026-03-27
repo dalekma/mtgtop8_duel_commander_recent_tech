@@ -250,7 +250,10 @@ Schema evolution policy:
 │     ├─ events_parser.js      # event-list/event metadata parsing
 │     ├─ decks_parser.js       # top8 deck parsing
 │     └─ cards_parser.js       # deck card-line parsing
-└─ tests/                      # optional parser/transform tests
+└─ tests/
+   └─ parsers/
+      ├─ fixtures/             # representative static MTGTop8 HTML pages
+      └─ validate.js           # static parser validation assertions
 ```
 
 7. Push code:
@@ -438,6 +441,24 @@ Mitigations:
 - Add parse-failure logs and row-level skip reasons.
 - Version scoring config in `config` tab notes.
 - Periodically audit dedup keys against real data anomalies.
+
+### Static parser fixture validation (local)
+
+Run this quick parser-only check before shipping parser changes:
+
+```bash
+node tests/parsers/validate.js
+```
+
+What it validates:
+
+- event-list parsing (`event_id`, `event_url`, `event_date`)
+- event-details Top 8 extraction (exactly 8 rows)
+- deck-card extraction (`card_qty`, `card_name`, section-derived `card_role`)
+
+Fixture update policy:
+
+- Any parser selector change in `src/parsers/*.js` must include corresponding fixture updates in `tests/parsers/fixtures/` and matching assertion updates in `tests/parsers/validate.js`.
 
 ---
 
