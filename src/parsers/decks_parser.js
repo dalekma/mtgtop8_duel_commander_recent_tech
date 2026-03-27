@@ -26,6 +26,7 @@ function parseTop8DeckRows(html, eventMeta) {
       placement: inferPlacement(label),
       player: '',
       commander: '',
+      deck_color_identity: normalizeDeckColorIdentity('', '', label),
       archetype: label,
       deck_url: absolutizeMtgtop8Url(href),
       is_top8: true,

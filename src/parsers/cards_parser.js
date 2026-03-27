@@ -19,10 +19,15 @@ function parseDeckCards(html, deckRow) {
       event_date: deckRow.event_date,
       placement: deckRow.placement,
       commander: deckRow.commander,
+      deck_color_identity: normalizeDeckColorIdentity(deckRow.deck_color_identity, deckRow.commander, deckRow.archetype),
       archetype: deckRow.archetype,
       card_name: parsed.card_name,
       card_qty: parsed.card_qty,
       card_role: parsed.card_role,
+      card_color_identity: normalizeColorIdentity(parsed.card_color_identity),
+      card_mana_value: normalizeManaValue(parsed.card_mana_value),
+      card_types: normalizeCardTypes(parsed.card_types),
+      is_land: normalizeLandFlag(parsed.is_land, parsed.card_types, parsed.card_role, parsed.card_name),
       deck_url: deckRow.deck_url,
       source_site: SOURCE_SITE,
       ingested_at_utc: nowIsoUtc()
@@ -43,16 +48,37 @@ function parseCardLine(line) {
   const name = normalizeCardName(qtyName[2]);
   if (!name || !Number.isFinite(qty) || qty <= 0) return null;
 
+  const inferredType = inferCardTypeFromLine(txt, name);
+
   return {
     card_qty: qty,
     card_name: name,
-    card_role: inferCardRole(name)
+    card_role: inferCardRole(name),
+    card_color_identity: inferColorIdentityFromCardName(name),
+    card_mana_value: inferManaValueFromLine(txt),
+    card_types: inferredType,
+    is_land: /(^|\s)land(\s|$)/i.test(inferredType)
   };
 }
 
 function inferCardRole(cardName) {
   if (/\bland\b/i.test(cardName)) return 'land';
   return 'main';
+}
+
+function inferColorIdentityFromCardName() {
+  return '';
+}
+
+function inferManaValueFromLine() {
+  return '';
+}
+
+function inferCardTypeFromLine(line, cardName) {
+  if (/\bland\b/i.test(line) || /\bland\b/i.test(cardName)) {
+    return 'Land';
+  }
+  return '';
 }
 
 function normalizeCardName(name) {
