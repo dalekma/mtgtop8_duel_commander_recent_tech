@@ -8,17 +8,10 @@ const URLS = Object.freeze({
   RECENT_DUEL_COMMANDER: 'https://www.mtgtop8.com/format?f=EDH'
 });
 
-const TAB_NAMES = Object.freeze({
-  CONFIG: 'config',
-  EVENTS_RAW: 'events_raw',
-  DECKS_RAW: 'decks_raw',
-  CARDS_RAW: 'cards_raw',
-  CARD_SUMMARY: 'card_summary',
-  EMERGING_TECH: 'emerging_tech'
-});
-
-const HEADERS = Object.freeze({
-  config: ['key', 'value', 'note'],
+const TAB_SCHEMAS = Object.freeze({
+  config: [
+    'key', 'value', 'note'
+  ],
   events_raw: [
     'event_id', 'event_url', 'event_name', 'format', 'location',
     'event_date', 'event_date_utc', 'source_site', 'source_page', 'ingested_at_utc'
@@ -61,17 +54,6 @@ const INGEST_LIMITS = Object.freeze({
   RETRY_SLEEP_MS: 500,
   FETCH_TIMEOUT_SECONDS: 25
 });
-
-function getTabHeaderMap() {
-  return Object.freeze({
-    [TAB_NAMES.CONFIG]: HEADERS.config,
-    [TAB_NAMES.EVENTS_RAW]: HEADERS.events_raw,
-    [TAB_NAMES.DECKS_RAW]: HEADERS.decks_raw,
-    [TAB_NAMES.CARDS_RAW]: HEADERS.cards_raw,
-    [TAB_NAMES.CARD_SUMMARY]: HEADERS.card_summary,
-    [TAB_NAMES.EMERGING_TECH]: HEADERS.emerging_tech
-  });
-}
 
 function getDefaultConfig() {
   return Object.assign({}, DEFAULT_CONFIG);

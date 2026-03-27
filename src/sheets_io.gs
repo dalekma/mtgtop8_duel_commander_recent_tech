@@ -6,11 +6,20 @@ function getSpreadsheet() {
   return SpreadsheetApp.getActiveSpreadsheet();
 }
 
-function ensureSheet(name, headers) {
+function getSheetSchema_(tabName) {
+  const headers = TAB_SCHEMAS[tabName];
+  if (!headers) {
+    throw new Error('Unknown tab schema: ' + tabName);
+  }
+  return headers;
+}
+
+function ensureSheet_(tabName) {
+  const headers = getSheetSchema_(tabName);
   const ss = getSpreadsheet();
-  let sheet = ss.getSheetByName(name);
+  let sheet = ss.getSheetByName(tabName);
   if (!sheet) {
-    sheet = ss.insertSheet(name);
+    sheet = ss.insertSheet(tabName);
   }
 
   const lastCol = Math.max(sheet.getLastColumn(), headers.length);
@@ -29,15 +38,7 @@ function ensureSheet(name, headers) {
   return sheet;
 }
 
-function initializeSheets() {
-  const map = getTabHeaderMap();
-  Object.keys(map).forEach(function (tabName) {
-    ensureSheet(tabName, map[tabName]);
-  });
-  logInfo('initialize_sheets_complete', { tabs: Object.keys(map).length });
-}
-
-function getHeaderIndex(sheet) {
+function getHeaderIndex_(sheet) {
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const map = {};
   headers.forEach(function (h, idx) {
@@ -46,11 +47,33 @@ function getHeaderIndex(sheet) {
   return map;
 }
 
+function readRawRows_(tabName) {
+  const headers = getSheetSchema_(tabName);
+  const sheet = ensureSheet_(tabName);
+  if (sheet.getLastRow() <= 1) {
+    return [];
+  }
+
+  return sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getValues();
+}
+
+function readObjects(tabName) {
+  const headers = getSheetSchema_(tabName);
+  const values = readRawRows_(tabName);
+  return values.map(function (row) {
+    const obj = {};
+    headers.forEach(function (h, idx) {
+      obj[h] = row[idx];
+    });
+    return obj;
+  });
+}
+
 function readExistingIdSet(tabName, idColumnName) {
-  const sheet = ensureSheet(tabName, getTabHeaderMap()[tabName]);
+  const sheet = ensureSheet_(tabName);
   if (sheet.getLastRow() <= 1) return {};
 
-  const index = getHeaderIndex(sheet);
+  const index = getHeaderIndex_(sheet);
   const colIdx = index[idColumnName];
   if (colIdx === undefined) throw new Error('Missing column ' + idColumnName + ' on ' + tabName);
 
@@ -63,10 +86,11 @@ function readExistingIdSet(tabName, idColumnName) {
   return out;
 }
 
-function appendObjects(tabName, rows, headers) {
+function appendObjects(tabName, rows) {
   if (!rows || rows.length === 0) return 0;
 
-  const sheet = ensureSheet(tabName, headers);
+  const headers = getSheetSchema_(tabName);
+  const sheet = ensureSheet_(tabName);
   const values = rows.map(function (row) {
     return headers.map(function (h) {
       return row[h] !== undefined ? row[h] : '';
@@ -78,8 +102,9 @@ function appendObjects(tabName, rows, headers) {
   return values.length;
 }
 
-function replaceSheetData(tabName, headers, rows) {
-  const sheet = ensureSheet(tabName, headers);
+function replaceSheetData(tabName, rows) {
+  const headers = getSheetSchema_(tabName);
+  const sheet = ensureSheet_(tabName);
   const lastRow = sheet.getLastRow();
   if (lastRow > 1) {
     sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
@@ -88,17 +113,18 @@ function replaceSheetData(tabName, headers, rows) {
   if (!rows || rows.length === 0) return;
 
   const values = rows.map(function (row) {
-    return headers.map(function (h) { return row[h] !== undefined ? row[h] : ''; });
+    return headers.map(function (h) {
+      return row[h] !== undefined ? row[h] : '';
+    });
   });
   sheet.getRange(2, 1, values.length, headers.length).setValues(values);
 }
 
 function loadRuntimeConfig() {
-  const sheet = ensureSheet(TAB_NAMES.CONFIG, HEADERS.config);
   const cfg = getDefaultConfig();
-  if (sheet.getLastRow() <= 1) return cfg;
+  const values = readRawRows_('config');
+  if (!values.length) return cfg;
 
-  const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).getValues();
   values.forEach(function (row) {
     const key = normalizeText(row[0]);
     if (!key) return;
@@ -119,7 +145,7 @@ function castConfigValue(rawValue, defaultValue) {
 }
 
 function setConfigValue(key, value, note) {
-  const sheet = ensureSheet(TAB_NAMES.CONFIG, HEADERS.config);
+  const sheet = ensureSheet_('config');
   const rows = Math.max(sheet.getLastRow() - 1, 0);
   if (rows > 0) {
     const values = sheet.getRange(2, 1, rows, 1).getValues();
