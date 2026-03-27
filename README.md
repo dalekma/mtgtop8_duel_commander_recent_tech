@@ -186,13 +186,17 @@ Suggested initial keys (optional but recommended):
 ├─ README.md
 ├─ appsscript.json
 ├─ src/
-│  ├─ main.gs              # menu + entrypoints
-│  ├─ config.gs            # config loading/defaults
-│  ├─ parser_mtgtop8.gs    # HTML parsing
-│  ├─ ingest.gs            # orchestration + dedup
-│  ├─ sheets_io.gs         # tab/header/read/write helpers
-│  └─ summary.gs           # card_summary + emerging_tech
-└─ tests/                  # optional local parser tests
+│  ├─ main.js                  # menu hooks + entrypoints
+│  ├─ config.js                # constants + schema + defaults
+│  ├─ sheets.js                # Google Sheets I/O only
+│  ├─ fetch.js                 # UrlFetch wrappers/logging
+│  ├─ ingest.js                # orchestration + incremental ingest
+│  ├─ summary.js               # card_summary + emerging_tech rebuild
+│  └─ parsers/
+│     ├─ events_parser.js      # event-list/event metadata parsing
+│     ├─ decks_parser.js       # top8 deck parsing
+│     └─ cards_parser.js       # deck card-line parsing
+└─ tests/                      # optional parser/transform tests
 ```
 
 5. In `.clasp.json`, point `rootDir` to your script source root (commonly `.` or `src` depending how you compile/deploy).
