@@ -117,22 +117,53 @@ function refreshRecentTop8() {
     }
   });
 
-  appendObjects('events_raw', newEvents);
-  appendObjects('decks_raw', newDecks);
-  appendObjects('cards_raw', newCards);
-
-  rebuildSummaries();
-  setConfigValue('last_successful_run_utc', nowIsoUtc(), 'Updated by refreshRecentTop8');
+  const appendResult = appendIngestRows_(newEvents, newDecks, newCards);
+  if (appendResult.success) {
+    rebuildSummaries();
+    setConfigValue('last_successful_run_utc', nowIsoUtc(), 'Updated by refreshRecentTop8');
+  } else {
+    logWarn('summary_rebuild_skipped', {
+      reason: 'append_stage_failed',
+      pending_events: newEvents.length,
+      pending_decks: newDecks.length,
+      pending_cards: newCards.length
+    });
+  }
 
   logInfo('refresh_complete', {
-    events_added: newEvents.length,
-    decks_added: newDecks.length,
-    cards_added: newCards.length,
+    events_added: appendResult.events_appended,
+    decks_added: appendResult.decks_appended,
+    cards_added: appendResult.cards_appended,
     event_counters: counters.events,
     deck_counters: counters.decks,
     card_counters: counters.cards,
     max_events_per_run: cfg.max_events_per_run
   });
+}
+
+
+function appendIngestRows_(eventsRows, deckRows, cardRows) {
+  try {
+    return {
+      success: true,
+      events_appended: appendObjects('events_raw', eventsRows),
+      decks_appended: appendObjects('decks_raw', deckRows),
+      cards_appended: appendObjects('cards_raw', cardRows)
+    };
+  } catch (err) {
+    logError('append_stage_failed', {
+      error: err && err.message ? err.message : String(err),
+      event_rows: eventsRows.length,
+      deck_rows: deckRows.length,
+      card_rows: cardRows.length
+    });
+    return {
+      success: false,
+      events_appended: 0,
+      decks_appended: 0,
+      cards_appended: 0
+    };
+  }
 }
 
 function createIngestCounters_() {
