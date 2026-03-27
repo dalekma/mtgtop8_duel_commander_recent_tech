@@ -304,6 +304,14 @@ Best practices:
 - Append only new rows.
 - Keep ingest append-only in raw tabs; recompute summary tabs deterministically.
 
+Implementation note in this repo:
+
+- `src/keying.gs` provides deterministic key builders:
+  - `buildEventId(eventUrl, token?)` → `event_id`
+  - `buildDeckId(deckUrl, token?)` → `deck_id`
+  - `buildRowId({deck_id, card_role, card_name, card_qty})` → `row_id`
+- `src/ingest.gs` loads existing `event_id`/`deck_id`/`row_id` values into in-memory maps before append and skips duplicates while logging `fetched`, `new_count`, `skipped_duplicate`, and `failed` counters.
+
 ---
 
 ## 9) Summary + Emerging-Tech Logic (with Tunable Scoring)
@@ -390,4 +398,3 @@ Mitigations:
 - Treat `events_raw`, `decks_raw`, and `cards_raw` as append-only audit history.
 - Treat `card_summary` and `emerging_tech` as rebuildable derived views.
 - Keep config changes documented in `config.note` for reproducibility.
-
