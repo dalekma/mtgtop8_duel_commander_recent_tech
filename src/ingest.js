@@ -9,15 +9,15 @@ function refreshRecentTop8() {
     return;
   }
 
-  initializeSheets();
+  initializeSheetSchema();
 
   const listHtml = fetchText(URLS.RECENT_DUEL_COMMANDER, { method: 'get' });
   const eventCandidates = parseRecentEventRows(listHtml, URLS.RECENT_DUEL_COMMANDER)
     .slice(0, cfg.max_events_per_run);
 
-  const eventIdSet = readExistingIdSet(TAB_NAMES.EVENTS_RAW, 'event_id');
-  const deckIdSet = readExistingIdSet(TAB_NAMES.DECKS_RAW, 'deck_id');
-  const cardIdSet = readExistingIdSet(TAB_NAMES.CARDS_RAW, 'row_id');
+  const eventIdSet = readExistingIdSet('events_raw', 'event_id');
+  const deckIdSet = readExistingIdSet('decks_raw', 'deck_id');
+  const cardIdSet = readExistingIdSet('cards_raw', 'row_id');
 
   const newEvents = [];
   const newDecks = [];
@@ -61,9 +61,9 @@ function refreshRecentTop8() {
     }
   });
 
-  appendObjects(TAB_NAMES.EVENTS_RAW, newEvents, HEADERS.events_raw);
-  appendObjects(TAB_NAMES.DECKS_RAW, newDecks, HEADERS.decks_raw);
-  appendObjects(TAB_NAMES.CARDS_RAW, newCards, HEADERS.cards_raw);
+  appendObjects('events_raw', newEvents);
+  appendObjects('decks_raw', newDecks);
+  appendObjects('cards_raw', newCards);
 
   rebuildSummaries();
   setConfigValue('last_successful_run_utc', nowIsoUtc(), 'Updated by refreshRecentTop8');

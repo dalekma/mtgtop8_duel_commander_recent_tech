@@ -4,26 +4,16 @@
 
 function rebuildSummaries() {
   const cfg = loadRuntimeConfig();
-  const cards = readObjects(TAB_NAMES.CARDS_RAW, HEADERS.cards_raw);
-  const decks = readObjects(TAB_NAMES.DECKS_RAW, HEADERS.decks_raw);
+  const cards = readObjects('cards_raw');
+  const decks = readObjects('decks_raw');
 
   const summaryRows = buildCardSummaryRows(cards, decks);
-  replaceSheetData(TAB_NAMES.CARD_SUMMARY, HEADERS.card_summary, summaryRows);
+  replaceSheetData('card_summary', summaryRows);
 
   const emergingRows = buildEmergingTechRows(summaryRows, cfg);
-  replaceSheetData(TAB_NAMES.EMERGING_TECH, HEADERS.emerging_tech, emergingRows);
+  replaceSheetData('emerging_tech', emergingRows);
 }
 
-function readObjects(tabName, headers) {
-  const sheet = ensureSheet(tabName, headers);
-  if (sheet.getLastRow() <= 1) return [];
-  const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getValues();
-  return values.map(function (row) {
-    const obj = {};
-    headers.forEach(function (h, idx) { obj[h] = row[idx]; });
-    return obj;
-  });
-}
 
 function buildCardSummaryRows(cards, decks) {
   const totalDecks = {};
