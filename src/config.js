@@ -18,20 +18,24 @@ const TAB_SCHEMAS = Object.freeze({
   ],
   decks_raw: [
     'deck_id', 'event_id', 'event_url', 'event_date', 'placement',
-    'player', 'commander', 'archetype', 'deck_url', 'is_top8', 'source_site', 'ingested_at_utc'
+    'player', 'commander', 'deck_color_identity', 'archetype', 'deck_url',
+    'is_top8', 'source_site', 'ingested_at_utc'
   ],
   cards_raw: [
     'row_id', 'deck_id', 'event_id', 'event_date', 'placement',
-    'commander', 'archetype', 'card_name', 'card_qty', 'card_role',
+    'commander', 'deck_color_identity', 'archetype', 'card_name', 'card_qty',
+    'card_role', 'card_color_identity', 'card_mana_value', 'card_types', 'is_land',
     'deck_url', 'source_site', 'ingested_at_utc'
   ],
   card_summary: [
-    'card_name', 'decks_with_card', 'total_copies', 'avg_copies_per_deck',
+    'card_name', 'card_color_identity', 'card_mana_value', 'card_types', 'is_land',
+    'decks_with_card', 'total_copies', 'avg_copies_per_deck',
     'top8_share', 'winrate_proxy', 'first_seen_date', 'last_seen_date',
     'days_since_last_seen', 'trend_7d', 'trend_28d', 'updated_at_utc'
   ],
   emerging_tech: [
-    'rank', 'card_name', 'emerging_score', 'confidence', 'sample_decks',
+    'rank', 'card_name', 'card_color_identity', 'card_mana_value', 'card_types', 'is_land',
+    'emerging_score', 'confidence', 'sample_decks',
     'trend_signal', 'recency_signal', 'penetration_signal', 'conversion_signal',
     'notes', 'updated_at_utc'
   ]

@@ -22,20 +22,39 @@ function ensureSheet_(tabName) {
     sheet = ss.insertSheet(tabName);
   }
 
-  const lastCol = Math.max(sheet.getLastColumn(), headers.length);
+  const lastCol = sheet.getLastColumn();
   const existing = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
 
   if (!existing[0]) {
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   } else {
-    const missing = headers.slice(existing.length);
-    if (missing.length > 0) {
-      sheet.getRange(1, existing.length + 1, 1, missing.length).setValues([missing]);
-    }
+    evolveSheetSchema_(sheet, headers, existing);
   }
 
   sheet.setFrozenRows(1);
   return sheet;
+}
+
+function evolveSheetSchema_(sheet, headers, existingHeaders) {
+  const existingMap = {};
+  existingHeaders.forEach(function (header) {
+    const key = normalizeText(header);
+    if (!key) return;
+    existingMap[key] = true;
+  });
+
+  const missing = headers.filter(function (header) {
+    return !existingMap[normalizeText(header)];
+  });
+
+  if (missing.length) {
+    const appendStart = sheet.getLastColumn() + 1;
+    sheet.getRange(1, appendStart, 1, missing.length).setValues([missing]);
+    logInfo('schema_columns_appended', {
+      tab: sheet.getName(),
+      missing_columns: missing
+    });
+  }
 }
 
 function getHeaderIndex_(sheet) {
@@ -47,6 +66,12 @@ function getHeaderIndex_(sheet) {
   return map;
 }
 
+function schemaAlignedRow_(row, headers) {
+  return headers.map(function (h) {
+    return row[h] !== undefined ? row[h] : '';
+  });
+}
+
 function readRawRows_(tabName) {
   const headers = getSheetSchema_(tabName);
   const sheet = ensureSheet_(tabName);
@@ -54,7 +79,15 @@ function readRawRows_(tabName) {
     return [];
   }
 
-  return sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length).getValues();
+  const allValues = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+  const index = getHeaderIndex_(sheet);
+
+  return allValues.map(function (rawRow) {
+    return headers.map(function (header) {
+      const col = index[header];
+      return col === undefined ? '' : rawRow[col];
+    });
+  });
 }
 
 function readObjects(tabName) {
@@ -92,9 +125,7 @@ function appendObjects(tabName, rows) {
   const headers = getSheetSchema_(tabName);
   const sheet = ensureSheet_(tabName);
   const values = rows.map(function (row) {
-    return headers.map(function (h) {
-      return row[h] !== undefined ? row[h] : '';
-    });
+    return schemaAlignedRow_(row, headers);
   });
 
   const startRow = sheet.getLastRow() + 1;
@@ -107,15 +138,13 @@ function replaceSheetData(tabName, rows) {
   const sheet = ensureSheet_(tabName);
   const lastRow = sheet.getLastRow();
   if (lastRow > 1) {
-    sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
+    sheet.getRange(2, 1, lastRow - 1, headers.length).clearContent();
   }
 
   if (!rows || rows.length === 0) return;
 
   const values = rows.map(function (row) {
-    return headers.map(function (h) {
-      return row[h] !== undefined ? row[h] : '';
-    });
+    return schemaAlignedRow_(row, headers);
   });
   sheet.getRange(2, 1, values.length, headers.length).setValues(values);
 }

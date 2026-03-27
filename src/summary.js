@@ -32,6 +32,10 @@ function buildCardSummaryRows(cards, decks) {
     if (!byCard[name]) {
       byCard[name] = {
         card_name: name,
+        card_color_identity: normalizeColorIdentity(row.card_color_identity),
+        card_mana_value: normalizeManaValue(row.card_mana_value),
+        card_types: normalizeCardTypes(row.card_types),
+        is_land: normalizeLandFlag(row.is_land, row.card_types, row.card_role, row.card_name),
         deck_ids: {},
         decks_with_card: 0,
         total_copies: 0,
@@ -62,6 +66,10 @@ function buildCardSummaryRows(cards, decks) {
 
     return {
       card_name: c.card_name,
+      card_color_identity: c.card_color_identity,
+      card_mana_value: c.card_mana_value,
+      card_types: c.card_types,
+      is_land: c.is_land,
       decks_with_card: c.decks_with_card,
       total_copies: c.total_copies,
       avg_copies_per_deck: round4(avgCopies),
@@ -95,6 +103,10 @@ function buildEmergingTechRows(cardSummaryRows, cfg) {
 
     return {
       card_name: row.card_name,
+      card_color_identity: normalizeColorIdentity(row.card_color_identity),
+      card_mana_value: normalizeManaValue(row.card_mana_value),
+      card_types: normalizeCardTypes(row.card_types),
+      is_land: normalizeLandFlag(row.is_land, row.card_types),
       emerging_score: round4(score),
       confidence: confidenceFromSamples(Number(row.decks_with_card)),
       sample_decks: Number(row.decks_with_card),
@@ -113,6 +125,10 @@ function buildEmergingTechRows(cardSummaryRows, cfg) {
     return {
       rank: idx + 1,
       card_name: row.card_name,
+      card_color_identity: row.card_color_identity,
+      card_mana_value: row.card_mana_value,
+      card_types: row.card_types,
+      is_land: row.is_land,
       emerging_score: row.emerging_score,
       confidence: row.confidence,
       sample_decks: row.sample_decks,

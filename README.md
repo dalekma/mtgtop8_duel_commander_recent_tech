@@ -64,23 +64,24 @@ Use this file-level map when making changes so each layer remains isolated:
   - `src/main.js` (menu hooks + manual wrappers)
   - `src/ingest.js` (incremental ingest run + trigger lifecycle)
 - **Google Sheets I/O layer**
-  - `src/sheets.js` (sheet creation, append-only writes, config row reads/writes)
+  - `src/sheets_io.gs` (sheet creation, append-only writes, config row reads/writes)
 - **Parsing layer**
   - `src/parsers/events_parser.js` (event-list + event metadata parsing)
   - `src/parsers/decks_parser.js` (Top 8 deck row parsing)
   - `src/parsers/cards_parser.js` (deck card-line parsing)
   - `src/fetch.js` (MTGTop8 HTTP retrieval + structured run logs)
 - **Normalization layer**
-  - `src/config.js` (`SOURCE_SITE`, tab schemas, default config constants)
+  - `src/config.js` (`SOURCE_SITE`, `TAB_SCHEMAS`, default config constants)
+  - `src/normalization.js` (canonical normalization helpers for deck/card fields)
   - shared helper functions in parser modules (`normalizeText`, `normalizeCardName`, stable ID helpers)
 - **Summary/reporting layer**
   - `src/summary.js` (`card_summary` + `emerging_tech` rebuild logic)
 
 ---
 
-## 3) Sheet Tab Schema (Exact Columns)
+## 3) Sheet Tab Schema (Single Source of Truth)
 
-Create tabs with the exact header row below (same spelling and order).
+`TAB_SCHEMAS` in `src/config.js` is the **single authoritative schema map**. The tab names and column order below must match that map exactly.
 
 ### `config`
 
@@ -89,18 +90,6 @@ Create tabs with the exact header row below (same spelling and order).
 | key |
 | value |
 | note |
-
-Suggested initial keys (optional but recommended):
-
-- `enabled` = `TRUE`
-- `days_back` = `35`
-- `max_events_per_run` = `100`
-- `min_card_copies` = `1`
-- `emerging_min_decks` = `2`
-- `weight_recency` = `0.40`
-- `weight_penetration` = `0.35`
-- `weight_conversion` = `0.25`
-- `last_successful_run_utc` = *(blank initially)*
 
 ### `events_raw`
 
@@ -128,6 +117,7 @@ Suggested initial keys (optional but recommended):
 | placement |
 | player |
 | commander |
+| deck_color_identity |
 | archetype |
 | deck_url |
 | is_top8 |
@@ -144,10 +134,15 @@ Suggested initial keys (optional but recommended):
 | event_date |
 | placement |
 | commander |
+| deck_color_identity |
 | archetype |
 | card_name |
 | card_qty |
 | card_role |
+| card_color_identity |
+| card_mana_value |
+| card_types |
+| is_land |
 | deck_url |
 | source_site |
 | ingested_at_utc |
@@ -157,6 +152,10 @@ Suggested initial keys (optional but recommended):
 | column |
 |---|
 | card_name |
+| card_color_identity |
+| card_mana_value |
+| card_types |
+| is_land |
 | decks_with_card |
 | total_copies |
 | avg_copies_per_deck |
@@ -175,6 +174,10 @@ Suggested initial keys (optional but recommended):
 |---|
 | rank |
 | card_name |
+| card_color_identity |
+| card_mana_value |
+| card_types |
+| is_land |
 | emerging_score |
 | confidence |
 | sample_decks |
@@ -185,7 +188,10 @@ Suggested initial keys (optional but recommended):
 | notes |
 | updated_at_utc |
 
----
+Schema evolution policy:
+- append missing columns only,
+- never clear `events_raw`, `decks_raw`, or `cards_raw`,
+- preserve historical rows.
 
 ## 4) Setup Instructions (Apps Script Deployment from This Repo)
 
@@ -205,7 +211,7 @@ Suggested initial keys (optional but recommended):
 5. Files deployed by `clasp` (exact source convention):
    - `src/main.js`
    - `src/config.js`
-   - `src/sheets.js`
+   - `src/sheets_io.gs`
    - `src/fetch.js`
    - `src/ingest.js`
    - `src/summary.js`
