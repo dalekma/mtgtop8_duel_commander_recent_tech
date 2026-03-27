@@ -201,7 +201,3 @@ function normalizeCardName(name) {
     .replace(/\s{2,}/g, ' ')
     .trim();
 }
-
-function buildCardRowId(deckId, cardName, cardRole) {
-  return [deckId, normalizeText(cardName).toLowerCase(), cardRole || 'main'].join('|');
-}

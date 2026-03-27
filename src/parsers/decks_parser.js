@@ -39,6 +39,8 @@ function parseTop8DeckRow_(rowHtml, eventMeta, rowIndex) {
 
   const deckMatch = (deckAnchor.href || '').match(/[?&]d=(\d+)/i);
   if (!deckMatch) return null;
+  const deckId = buildDeckId(eventMeta.event_id, deckMatch[1]);
+  if (!deckId) return null;
 
   const cells = extractTableCells_(rowHtml).map(function (cellHtml) {
     return normalizeText(htmlToTextWithBreaks_(cellHtml));
@@ -50,7 +52,7 @@ function parseTop8DeckRow_(rowHtml, eventMeta, rowIndex) {
   const inferredShell = inferShellFromCommander_(commander, archetype);
 
   return {
-    deck_id: deckMatch[1],
+    deck_id: deckId,
     event_id: eventMeta.event_id,
     event_url: eventMeta.event_url,
     event_date: eventMeta.event_date,

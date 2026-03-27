@@ -33,8 +33,8 @@ function parseRecentEventRow_(rowHtml, sourcePageUrl) {
   });
   if (!eventLink) return null;
 
-  const eventIdMatch = eventLink.href.match(/[?&]e=(\d+)/i);
-  if (!eventIdMatch) return null;
+  const eventId = buildEventIdFromUrl(eventLink.href, '');
+  if (!eventId) return null;
 
   const eventName = normalizeText(eventLink.text || '');
   if (!eventName) return null;
@@ -44,7 +44,7 @@ function parseRecentEventRow_(rowHtml, sourcePageUrl) {
   const playersCount = inferPlayersCount_(rowText);
 
   return {
-    event_id: eventIdMatch[1],
+    event_id: eventId,
     event_url: absolutizeMtgtop8Url(eventLink.href),
     event_name: eventName,
     format: 'Duel Commander',
@@ -59,8 +59,7 @@ function parseRecentEventRow_(rowHtml, sourcePageUrl) {
 }
 
 function parseEventMetadata(html, eventUrl) {
-  const eventIdMatch = eventUrl.match(/[?&]e=(\d+)/i);
-  const eventId = eventIdMatch ? eventIdMatch[1] : '';
+  const eventId = buildEventIdFromUrl(eventUrl, '');
   const title = extractTitle(html);
 
   return {

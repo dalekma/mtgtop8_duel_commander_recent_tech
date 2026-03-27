@@ -44,7 +44,7 @@ const TAB_SCHEMAS = Object.freeze({
 const DEFAULT_CONFIG = Object.freeze({
   enabled: true,
   days_back: 35,
-  max_events_per_run: 100,
+  max_events_per_run: 3,
   min_card_copies: 1,
   emerging_min_decks: 2,
   weight_recency: 0.4,

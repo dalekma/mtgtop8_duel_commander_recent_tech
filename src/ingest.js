@@ -19,31 +19,86 @@ function refreshRecentTop8() {
   const deckIdSet = readExistingIdSet('decks_raw', 'deck_id');
   const cardIdSet = readExistingIdSet('cards_raw', 'row_id');
 
+  const seenRunEventIds = {};
+  const seenRunDeckIds = {};
+  const seenRunCardIds = {};
+  const counters = createIngestCounters_();
+
   const newEvents = [];
   const newDecks = [];
   const newCards = [];
 
   eventCandidates.forEach(function (eventStub) {
-    if (eventIdSet[eventStub.event_id]) return;
+    const eventId = normalizeText(eventStub && eventStub.event_id);
+    if (!eventId) {
+      incrementCounter_(counters.events.failed, 'missing_event_id');
+      return;
+    }
+    if (eventIdSet[eventId]) {
+      incrementCounter_(counters.events.skipped, 'existing_event_id');
+      return;
+    }
+    if (seenRunEventIds[eventId]) {
+      incrementCounter_(counters.events.skipped, 'duplicate_event_candidate');
+      return;
+    }
+    seenRunEventIds[eventId] = true;
 
     try {
       const eventHtml = fetchText(eventStub.event_url, { method: 'get' });
       const eventMeta = parseEventMetadata(eventHtml, eventStub.event_url);
+      if (!eventMeta.event_id) {
+        incrementCounter_(counters.events.failed, 'missing_event_id_after_parse');
+        return;
+      }
       newEvents.push(eventMeta);
+      incrementCounter_(counters.events.imported, 'event_row_ready');
 
       const deckRows = parseTop8DeckRows(eventHtml, eventMeta);
       deckRows.forEach(function (deckRow) {
-        if (deckIdSet[deckRow.deck_id]) return;
+        const deckId = normalizeText(deckRow && deckRow.deck_id);
+        if (!deckId) {
+          incrementCounter_(counters.decks.failed, 'missing_deck_id');
+          return;
+        }
+        if (deckIdSet[deckId]) {
+          incrementCounter_(counters.decks.skipped, 'existing_deck_id');
+          return;
+        }
+        if (seenRunDeckIds[deckId]) {
+          incrementCounter_(counters.decks.skipped, 'duplicate_deck_candidate');
+          return;
+        }
+        seenRunDeckIds[deckId] = true;
 
         try {
           const deckHtml = fetchText(deckRow.deck_url, { method: 'get' });
-          const cards = parseDeckCards(deckHtml, deckRow).filter(function (c) {
-            return !cardIdSet[c.row_id];
+          const cards = parseDeckCards(deckHtml, deckRow).filter(function (cardRow) {
+            const rowId = normalizeText(cardRow && cardRow.row_id);
+            if (!rowId) {
+              incrementCounter_(counters.cards.failed, 'missing_row_id');
+              return false;
+            }
+            if (cardIdSet[rowId]) {
+              incrementCounter_(counters.cards.skipped, 'existing_row_id');
+              return false;
+            }
+            if (seenRunCardIds[rowId]) {
+              incrementCounter_(counters.cards.skipped, 'duplicate_card_candidate');
+              return false;
+            }
+            seenRunCardIds[rowId] = true;
+            return true;
           });
 
           newDecks.push(deckRow);
+          incrementCounter_(counters.decks.imported, 'deck_row_ready');
           Array.prototype.push.apply(newCards, cards);
+          if (cards.length) {
+            incrementCounter_(counters.cards.imported, 'card_rows_ready', cards.length);
+          }
         } catch (deckErr) {
+          incrementCounter_(counters.decks.failed, 'deck_fetch_or_parse_failed');
           logWarn('deck_ingest_failed', {
             event_id: eventMeta.event_id,
             deck_id: deckRow.deck_id,
@@ -53,6 +108,7 @@ function refreshRecentTop8() {
         }
       });
     } catch (eventErr) {
+      incrementCounter_(counters.events.failed, 'event_fetch_or_parse_failed');
       logWarn('event_ingest_failed', {
         event_id: eventStub.event_id,
         event_url: eventStub.event_url,
@@ -71,8 +127,26 @@ function refreshRecentTop8() {
   logInfo('refresh_complete', {
     events_added: newEvents.length,
     decks_added: newDecks.length,
-    cards_added: newCards.length
+    cards_added: newCards.length,
+    event_counters: counters.events,
+    deck_counters: counters.decks,
+    card_counters: counters.cards,
+    max_events_per_run: cfg.max_events_per_run
   });
+}
+
+function createIngestCounters_() {
+  return {
+    events: { imported: {}, skipped: {}, failed: {} },
+    decks: { imported: {}, skipped: {}, failed: {} },
+    cards: { imported: {}, skipped: {}, failed: {} }
+  };
+}
+
+function incrementCounter_(bucket, reason, amount) {
+  const key = normalizeText(reason) || 'unspecified';
+  const delta = Number(amount) || 1;
+  bucket[key] = (bucket[key] || 0) + delta;
 }
 
 function installOrUpdateWeeklyTrigger() {
