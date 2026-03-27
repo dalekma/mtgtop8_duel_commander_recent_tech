@@ -56,6 +56,28 @@ Data flow:
 
 ---
 
+## 2.1) Code ownership map
+
+Use this file-level map when making changes so each layer remains isolated:
+
+- **Orchestration layer**
+  - `src/main.js` (menu hooks + manual wrappers)
+  - `src/ingest.js` (incremental ingest run + trigger lifecycle)
+- **Google Sheets I/O layer**
+  - `src/sheets.js` (sheet creation, append-only writes, config row reads/writes)
+- **Parsing layer**
+  - `src/parsers/events_parser.js` (event-list + event metadata parsing)
+  - `src/parsers/decks_parser.js` (Top 8 deck row parsing)
+  - `src/parsers/cards_parser.js` (deck card-line parsing)
+  - `src/fetch.js` (MTGTop8 HTTP retrieval + structured run logs)
+- **Normalization layer**
+  - `src/config.js` (`SOURCE_SITE`, tab schemas, default config constants)
+  - shared helper functions in parser modules (`normalizeText`, `normalizeCardName`, stable ID helpers)
+- **Summary/reporting layer**
+  - `src/summary.js` (`card_summary` + `emerging_tech` rebuild logic)
+
+---
+
 ## 3) Sheet Tab Schema (Exact Columns)
 
 Create tabs with the exact header row below (same spelling and order).
@@ -169,7 +191,7 @@ Suggested initial keys (optional but recommended):
 
 > You can use either the Google Apps Script web editor or `clasp`. The `clasp` layout below is recommended for version control.
 
-### Option A — `clasp`-compatible (recommended)
+### Option A — `clasp`-compatible (recommended and canonical in this repo)
 
 1. Install prerequisites:
    - Node.js LTS
@@ -179,7 +201,19 @@ Suggested initial keys (optional but recommended):
 3. Initialize script linkage in this repo:
    - `clasp create --type sheets --title "Duel Commander Recent Tech"`
    - This creates `.clasp.json` (script ID binding).
-4. Suggested local structure:
+4. Use `.clasp.json` with `rootDir` set to the repository root (`"."`), so `clasp push` deploys the `src/` tree directly.
+5. Files deployed by `clasp` (exact source convention):
+   - `src/main.js`
+   - `src/config.js`
+   - `src/sheets.js`
+   - `src/fetch.js`
+   - `src/ingest.js`
+   - `src/summary.js`
+   - `src/parsers/events_parser.js`
+   - `src/parsers/decks_parser.js`
+   - `src/parsers/cards_parser.js`
+   - Legacy `src/*.gs` duplicates were retired to avoid global function collisions.
+6. Suggested local structure:
 
 ```text
 .
@@ -199,10 +233,9 @@ Suggested initial keys (optional but recommended):
 └─ tests/                      # optional parser/transform tests
 ```
 
-5. In `.clasp.json`, point `rootDir` to your script source root (commonly `.` or `src` depending how you compile/deploy).
-6. Push code:
+7. Push code:
    - `clasp push`
-7. Open project:
+8. Open project:
    - `clasp open-script`
 
 ### Option B — Web editor
@@ -394,4 +427,3 @@ Mitigations:
 - Treat `events_raw`, `decks_raw`, and `cards_raw` as append-only audit history.
 - Treat `card_summary` and `emerging_tech` as rebuildable derived views.
 - Keep config changes documented in `config.note` for reproducibility.
-
